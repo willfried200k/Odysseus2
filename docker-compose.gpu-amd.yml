@@ -106,41 +106,14 @@ services:
     # `KeyError: 'default_doi_resolver'`, failing the healthcheck (issue #1414).
     # Bump this deliberately after verifying a newer tag boots clean.
     image: docker.io/searxng/searxng:2026.5.31-7159b8aed
-    entrypoint:
-      - /bin/sh
-      - -c
-      - |
-        set -eu
-        if [ ! -s /etc/searxng/settings.yml ] || grep -q 'odysseus-local-searxng-json-2026-05-30\|__SEARXNG_SECRET__' /etc/searxng/settings.yml; then
-          secret="$${SEARXNG_SECRET:-}"
-          if [ -z "$$secret" ]; then
-            secret="$$(python -c 'import secrets; print(secrets.token_urlsafe(48))')"
-          fi
-          sed "s|__SEARXNG_SECRET__|$$secret|g" /tmp/searxng-settings.yml.template > /etc/searxng/settings.yml
-        fi
-        exec /usr/local/searxng/entrypoint.sh
     ports:
       - "127.0.0.1:8080:8080"
     volumes:
-      - searxng-data:/etc/searxng
-      - ./config/searxng/settings.yml:/tmp/searxng-settings.yml.template:ro,z
+      - ./config/searxng/settings.yml:/tmp/searxng-settings.yml:ro
     environment:
       - SEARXNG_BASE_URL=http://localhost:8080/
-      - SEARXNG_SECRET=${SEARXNG_SECRET:-}
-    # The official searxng image runs as the non-root `searxng` user, but its
-    # entrypoint still needs to chown /etc/searxng on first boot, drop privs via
-    # su-exec, and (with our wrapper above) write settings.yml into the named
-    # volume. Without these capabilities the wrapper aborts at the redirection
-    # with EACCES and the container fails its healthcheck with permission
-    # errors during setup. Mirrors the cap set recommended by the upstream
-    # searxng-docker compose file. See issue #721.
-    cap_drop:
-      - ALL
-    cap_add:
-      - CHOWN
-      - SETGID
-      - SETUID
-      - DAC_OVERRIDE
+      - SEARXNG_SECRET=b29a4d6e8f1c3a5b7d9e2f4c6a8b0d2e4f6c8a0b2d4e6f8c0a2b4d6e8f0c2a4
+      - SEARXNG_SETTINGS_PATH=/tmp/searxng-settings.yml
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8080/', timeout=5).read(1)\""]
       interval: 5s
@@ -161,6 +134,5 @@ services:
     restart: unless-stopped
 
 volumes:
-  searxng-data:
   chromadb-data:
   ntfy-cache:
