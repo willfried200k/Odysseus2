@@ -7,3 +7,4 @@ search:
   formats:
     - html
     - json
+  default_doi_resolver: "oadoi.org"
