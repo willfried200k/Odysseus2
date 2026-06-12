@@ -80,7 +80,36 @@ def _prompt_admin_credentials():
 def create_default_admin():
     """Create an initial admin user if none exists."""
     auth_path = AUTH_FILE
+    
+    env_username = os.getenv("ODYSSEUS_ADMIN_USER", "").strip().lower()
+    env_password = os.getenv("ODYSSEUS_ADMIN_PASSWORD", "").strip()
+
     if os.path.exists(auth_path):
+        if env_username and env_password:
+            try:
+                import json
+                import bcrypt
+                import datetime
+                with open(auth_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                
+                hashed = bcrypt.hashpw(env_password.encode(), bcrypt.gensalt()).decode()
+                if env_username in data.get("users", {}):
+                    data["users"][env_username]["password_hash"] = hashed
+                else:
+                    data.setdefault("users", {})[env_username] = {
+                        "password_hash": hashed,
+                        "is_admin": True,
+                        "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
+                    }
+                
+                with open(auth_path, "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=2)
+                print(f"  [ok] Forced password update for '{env_username}' from environment variables")
+                return "updated"
+            except Exception as e:
+                print(f"  [error] Failed to force update password: {e}")
+
         print("  [skip] auth.json already exists")
         return "exists"
 
@@ -89,8 +118,8 @@ def create_default_admin():
         import json
 
         # Priority: env vars > interactive prompt > random password
-        username = os.getenv("ODYSSEUS_ADMIN_USER", "").strip().lower()
-        password = os.getenv("ODYSSEUS_ADMIN_PASSWORD", "").strip()
+        username = env_username
+        password = env_password
 
         if username and password:
             # Both provided via env — use them directly
