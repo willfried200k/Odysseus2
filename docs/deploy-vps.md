@@ -1,8 +1,56 @@
-# Manifeste de Déploiement Odysseus pour un nouveau VPS
+# Manifeste de Déploiement Odysseus pour VPS
 
-Ce guide (ou manifeste) regroupe toutes les commandes nécessaires pour déployer Odysseus-MyAI sur un serveur virtuel (VPS) Linux vierge (Ubuntu/Debian), **sans utiliser Coolify**, de façon totalement autonome et sécurisée.
+Ce guide regroupe les instructions pour déployer Odysseus sur un serveur virtuel (VPS) de deux manières : avec **Coolify** (méthode recommandée et automatisée), ou **manuellement** de façon autonome.
 
 ---
+
+## 1. Déploiement via Coolify v4 (Recommandé)
+
+Coolify simplifie considérablement la gestion du serveur, des certificats SSL (HTTPS) et des mises à jour. Voici la configuration exacte pour qu'Odysseus fonctionne parfaitement :
+
+### A. Création du projet
+1. Dans Coolify, créez une nouvelle ressource de type **Docker Compose** basée sur votre dépôt GitHub.
+2. Choisissez la branche `main`.
+
+### B. Configuration du Domaine et du Port (Crucial)
+Par défaut, Coolify tente de router le trafic web vers le port 80. Comme Odysseus tourne sur le port 7000, vous devez **spécifier ce port directement dans le nom de domaine**.
+* Allez dans l'onglet **Configuration** de votre service `odysseus`.
+* Dans le champ **Domains**, entrez votre domaine suivi de `:7000`. Par exemple :
+  👉 `https://odysseus.votre-domaine.com:7000`
+*(Coolify retirera le `:7000` pour les visiteurs extérieurs mais saura qu'il doit envoyer le trafic interne sur la bonne porte).*
+
+### C. Variables d'Environnement
+Allez dans l'onglet **Environment Variables** et ajoutez cette liste (c'est indispensable pour le réseau, la sécurité et le premier compte admin) :
+
+```env
+# 1. Configuration réseau
+ALLOWED_ORIGINS=https://odysseus.votre-domaine.com
+APP_BIND=0.0.0.0
+APP_PORT=7000
+
+# 2. Sécurité
+AUTH_ENABLED=true
+SECURE_COOKIES=true
+LOCALHOST_BYPASS=false
+
+# 3. Contournement d'un bug de Coolify avec SearXNG
+SEARXNG_SECRET=b29a4d6e8f1c3a5b7d9e2f4c6a8b0d2e4f6c8a0b2d4e6f8c0a2b4d6e8f0c2a4
+
+# 4. Premier administrateur (personnalisez ces valeurs)
+ODYSSEUS_ADMIN_USER=admin
+ODYSSEUS_ADMIN_PASSWORD=MonMotDePasseSecret123
+```
+
+### D. Lancement
+1. Sauvegardez tout.
+2. Cliquez sur **Deploy** (ou Redeploy).
+3. Patientez 1 à 2 minutes, puis rendez-vous sur votre domaine. Connectez-vous avec l'utilisateur et le mot de passe que vous avez choisis dans les variables d'environnement !
+
+---
+
+## 2. Déploiement Manuel sur VPS Vierge (Sans Coolify)
+
+Ce guide regroupe toutes les commandes nécessaires pour déployer Odysseus de façon totalement autonome en ligne de commande.
 
 ## 1. Prérequis système
 Assurez-vous d'être connecté à votre VPS en SSH (`ssh root@ip-du-vps`).
